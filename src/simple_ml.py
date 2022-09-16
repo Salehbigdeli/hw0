@@ -1,4 +1,6 @@
+from random import randrange
 import struct
+from traceback import print_tb
 import numpy as np
 import gzip
 try:
@@ -101,7 +103,22 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    sample_size = len(X)
+    n_batches = (sample_size + batch - 1)//batch
+    n = n_batches*batch
+    n_clss = theta.shape[1]
+    count = 0
+    for i in range(0, n, batch):
+        count += 1
+        batch_start, batch_end = i, min(i + batch, len(y))
+        X_batch, y_batch = X[batch_start: batch_end, ...], y[batch_start: batch_end, ...]
+        m = len(y_batch)
+        H = X_batch.dot(theta)
+        Z = np.exp(H)/np.sum(np.exp(H), axis=1).reshape(m, 1)
+        Iy = np.eye(n_clss)[y_batch]
+        grad = np.transpose(X_batch).dot(Z-Iy)/m
+        theta -= lr*grad  #   IMPORTANT: theta = theta - lr*grad is not working!!!
+
     ### END YOUR CODE
 
 
