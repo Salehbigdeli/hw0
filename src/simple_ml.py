@@ -145,7 +145,29 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    sample_size = len(X)
+    n_batches = (sample_size + batch - 1)//batch
+    n = n_batches*batch
+    n_clss = W2.shape[1]
+    for i in range(0, n, batch):
+        batch_start, batch_end = i, min(i + batch, len(y))
+        X_batch, y_batch = X[batch_start: batch_end, ...], y[batch_start: batch_end, ...]
+        m = len(y_batch)
+        Z1 = X_batch.dot(W1)
+        Z1[Z1<0] = 0
+        
+        H2 = Z1.dot(W2)
+        H2n = np.exp(H2)/np.sum(np.exp(H2), axis=1).reshape(m, 1)
+        Iy = np.eye(n_clss)[y_batch]
+        G2 = H2n - Iy
+        G1 = (Z1 > 0)*(G2.dot(W2.transpose()))
+
+        gradW1 = X_batch.transpose().dot(G1)/m
+        gradW2 = Z1.transpose().dot(G2)/m
+
+        W1 -= lr*gradW1
+        W2 -= lr*gradW2
+
     ### END YOUR CODE
 
 
