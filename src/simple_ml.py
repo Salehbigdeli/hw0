@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,15 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    images, labels = None, None
+
+    with gzip.open(image_filesname) as f:
+        pixels = np.frombuffer(f.read(), 'B', offset=16)
+        images = pixels.reshape(-1, 784).astype('float32') / 255
+    with gzip.open(label_filename) as f:
+        labels = np.frombuffer(f.read(), 'B', offset=8)
+    
+    return images, labels
     ### END YOUR CODE
 
 
@@ -68,7 +76,9 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    Zy = Z[np.arange(len(Z)), y].reshape(-1, 1)
+    losses = np.log(np.sum(np.exp(Z-Zy), axis=1))
+    return losses.mean()
     ### END YOUR CODE
 
 
