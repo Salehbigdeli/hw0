@@ -50,7 +50,7 @@ def parse_mnist(image_filename, label_filename):
     ### BEGIN YOUR CODE
     images, labels = None, None
 
-    with gzip.open(image_filesname) as f:
+    with gzip.open(image_filename) as f:
         pixels = np.frombuffer(f.read(), 'B', offset=16)
         images = pixels.reshape(-1, 784).astype('float32') / 255
     with gzip.open(label_filename) as f:
