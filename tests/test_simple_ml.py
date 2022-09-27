@@ -89,8 +89,8 @@ def test_softmax_regression_epoch():
     dTheta = -nd.Gradient(lambda Th : softmax_loss(X@Th.reshape(5,3),y))(Theta)
     softmax_regression_epoch(X,y,Theta,lr=1.0,batch=50)
     np.testing.assert_allclose(dTheta.reshape(5,3), Theta, rtol=1e-4, atol=1e-4)
-
-
+    # print(Theta)
+    # assert False
     # test multi-steps on MNIST
     X,y = parse_mnist("data/train-images-idx3-ubyte.gz",
                       "data/train-labels-idx1-ubyte.gz")
@@ -181,7 +181,7 @@ def test_softmax_regression_epoch_cpp():
     softmax_regression_epoch_cpp(X,y,Theta,lr=1.0,batch=50)
     np.testing.assert_allclose(dTheta.reshape(5,3), Theta, rtol=1e-4, atol=1e-4)
 
-
+    print(Theta)
     # test multi-steps on MNIST
     X,y = parse_mnist("data/train-images-idx3-ubyte.gz",
                       "data/train-labels-idx1-ubyte.gz")
