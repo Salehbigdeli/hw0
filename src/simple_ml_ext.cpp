@@ -6,8 +6,8 @@
 namespace py = pybind11;
 
 
-double* batch_dot(size_t s, size_t e, size_t n, size_t k, const double *X, double *theta) {
-    double * res = new double[(e-s)*k];
+float* batch_dot(size_t s, size_t e, size_t n, size_t k, const float *X, float *theta) {
+    float * res = new float[(e-s)*k];
     for (size_t i = 0; i < (e-s)*k; i++)
     {
         res[i] = 0;
@@ -20,33 +20,27 @@ double* batch_dot(size_t s, size_t e, size_t n, size_t k, const double *X, doubl
             }
         }
     }
-    double * res2 = new double[(e-s)*k];
-    for (size_t i = 0; i < (e-s)*k; i++) res2[i] = res[i];
-    return res2;
+    
+    return res;
 }
 
-void z_normalized_minus_Iy(int m, int n, double *x, const unsigned char *y) {
-    double sum = 0;
-    // for (size_t i = 0; i < m; i++) sums[i] = 0;
-
+void z_normalized_minus_Iy(int m, int n, int batch_start, float *x, const unsigned char *y) {
+    float sum;
     for (int i=0 ; i < m; ++i) {
         sum = 0;
         for (int j=0 ; j < n ; ++j) {
-            // x[i*n+j] = exp(x[i*n + j]);
             sum += exp(x[i*n + j]);
         }
         for (int j=0 ; j < n ; ++j) {
             x[i*n+j] = exp(x[i*n + j])/sum;
-            if (y[i] == j) x[i*n+j] -= 1;
+            if (y[batch_start + i] == j) x[i*n+j] -= 1;
         }
         
     }
-    // for (size_t i = 0; i < m; i++) std::cout<<"\n"<<sums[i] <<"\n";
 }
 
-double* batch_transpose(int s, int e, int n, const double *x){
-    double *xt = new double[n*(e-s)];
-    // for (size_t i = 0; i < (e-s)*n; i++) xt[i] = 0;
+float* batch_transpose(int s, int e, int n, const float *x){
+    float *xt = new float[n*(e-s)];
     for (int i=s ; i < e; ++i) {
         for (int j=0 ; j < n ; ++j) {
             xt[j*(e-s) + i-s] = x[i*n + j];
@@ -55,15 +49,11 @@ double* batch_transpose(int s, int e, int n, const double *x){
     return xt;
 }
 
-void update_theta(int m, int n, double *x, double *grad, double lr, int batch) {
-    for (int i=0 ; i < m; ++i) {
-        for (int j=0 ; j < n ; ++j) {
-            x[i*n + j] -= lr*(grad[i*n + j]/(double)batch);
-        }
-    }
+void update_theta(int m, int n, float *x, float *grad, float lr, float bs) {
+    for (int i=0 ; i < m*n; ++i) x[i] -= lr*grad[i]/bs;
 }
 
-void print(const double *X, size_t m, size_t n) {
+void print(const float *X, size_t m, size_t n) {
     for (size_t i=0 ; i < m; ++i) {
         for (size_t j=0 ; j < n ; ++j) {
             std::cout<<X[i*n + j] <<"  ";
@@ -99,55 +89,24 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
      */
 
     /// BEGIN YOUR CODE
-    double * X2 = new double[m*n];
-    for (size_t i = 0; i < m*n; i++) X2[i] = X[i];
-
-    double * theta2 = new double[k*n];
-    for (size_t i = 0; i < k*n; i++) theta2[i] = theta[i];
-    double lr2 = lr;
     
     size_t n_batches = (m + batch - 1)/batch;
     size_t num = n_batches*batch;
     for (size_t i = 0; i < num; i+=batch)
     {
-        std::cout<<"hi "<<i<<"\n";
         size_t batch_start = i;
         size_t batch_end = i + batch;
         if (batch_end > m) batch_end = m;
-        double * H = batch_dot(batch_start, batch_end, n, k, X2, theta2);
-        // std::cout<<"\n\n\nhello\n\n\n\n";
-        // print(H, 50, k);
-        // print(X, m, n);
-        z_normalized_minus_Iy(batch_end-batch_start, k, H, y);
-        // print()
-        // std::cout<<"\n\n\nhello "<< m <<"   " <<n <<"   " << k << "\n\n\n\n";
-        double *bt = batch_transpose(batch_start, batch_end, n, X2);
-        // std::cout<<"\n\n\nhello "<< batch_start <<"   " <<batch_end << "\n\n\n\n";
-        // print(bt, n, batch_end-batch_start);
-        double *grad = batch_dot(0, n, batch_end-batch_start, k, bt, H);
-        update_theta(n, k, theta2, grad, lr2, batch_end-batch_start);
+        size_t bs = batch_end - batch_start;
+        float * H = batch_dot(batch_start, batch_end, n, k, X, theta);
+        
+        z_normalized_minus_Iy(bs, k, batch_start, H, y);
+        float *bt = batch_transpose(batch_start, batch_end, n, X);
+        
+        float *grad = batch_dot(0, n, bs, k, bt, H);
+        update_theta(n, k, theta, grad, (float)lr, (float)bs);
     }
-    for (size_t i = 0; i < k*n; i++) theta[i] = (float)theta2[i];
     
-    
-    /*
-    sample_size = len(X)
-    n_batches = (sample_size + batch - 1)//batch
-    n = n_batches*batch
-    n_clss = theta.shape[1]
-    count = 0
-    for i in range(0, n, batch):
-        count += 1
-        batch_start, batch_end = i, min(i + batch, len(y))
-        X_batch, y_batch = X[batch_start: batch_end, ...], y[batch_start: batch_end, ...]
-        m = len(y_batch)
-        H = X_batch.dot(theta)
-        Z = np.exp(H)/np.sum(np.exp(H), axis=1).reshape(m, 1)
-        Iy = np.eye(n_clss)[y_batch]
-        grad = np.transpose(X_batch).dot(Z-Iy)/m
-        theta -= lr*grad  #   IMPORTANT: theta = theta - lr*grad is not working!!!
-
-    */
     /// END YOUR CODE
 }
 
